@@ -1,0 +1,166 @@
+{
+  "name": "Pron\u00f3sticos Deportivos (Bzzoiro + Telegram)",
+  "flow": [
+    {
+      "id": 1,
+      "module": "telegram:WatchUpdates",
+      "version": 1,
+      "parameters": {},
+      "mapper": {},
+      "metadata": {
+        "designer": {
+          "x": 0,
+          "y": 0
+        },
+        "restore": {
+          "parameters": {
+            "hook": {
+              "label": "My Telegram Bot"
+            }
+          }
+        }
+      }
+    },
+    {
+      "id": 2,
+      "module": "builtin:BasicRouter",
+      "version": 1,
+      "parameters": {},
+      "mapper": {},
+      "metadata": {
+        "designer": {
+          "x": 300,
+          "y": 0
+        }
+      }
+    },
+    {
+      "id": 3,
+      "module": "http:ActionMakeRequest",
+      "version": 3,
+      "parameters": {
+        "handleErrors": false
+      },
+      "mapper": {
+        "url": "https://sports.bzzoiro.com/football/matches/today",
+        "method": "get",
+        "headers": [
+          {
+            "name": "Authorization",
+            "value": "Token YOUR_BZZOIRO_API_KEY"
+          }
+        ],
+        "parseResponse": true
+      },
+      "metadata": {
+        "designer": {
+          "x": 600,
+          "y": -150
+        }
+      }
+    },
+    {
+      "id": 4,
+      "module": "builtin:BasicIterator",
+      "version": 1,
+      "parameters": {},
+      "mapper": {
+        "array": "{{3.data.matches}}"
+      },
+      "metadata": {
+        "designer": {
+          "x": 900,
+          "y": -150
+        }
+      }
+    },
+    {
+      "id": 5,
+      "module": "http:ActionMakeRequest",
+      "version": 3,
+      "parameters": {
+        "handleErrors": false
+      },
+      "mapper": {
+        "url": "https://sports.bzzoiro.com/football/teams/{{4.homeTeamId}}/stats",
+        "method": "get",
+        "headers": [
+          {
+            "name": "Authorization",
+            "value": "Token YOUR_BZZOIRO_API_KEY"
+          }
+        ],
+        "parseResponse": true
+      },
+      "metadata": {
+        "designer": {
+          "x": 1200,
+          "y": -150
+        }
+      }
+    },
+    {
+      "id": 6,
+      "module": "http:ActionMakeRequest",
+      "version": 3,
+      "parameters": {
+        "handleErrors": false
+      },
+      "mapper": {
+        "url": "https://sports.bzzoiro.com/football/teams/{{4.awayTeamId}}/stats",
+        "method": "get",
+        "headers": [
+          {
+            "name": "Authorization",
+            "value": "Token YOUR_BZZOIRO_API_KEY"
+          }
+        ],
+        "parseResponse": true
+      },
+      "metadata": {
+        "designer": {
+          "x": 1500,
+          "y": -150
+        }
+      }
+    },
+    {
+      "id": 7,
+      "module": "builtin:BasicTextAggregator",
+      "version": 1,
+      "parameters": {
+        "feeder": 4
+      },
+      "mapper": {
+        "rowSeparator": "\\n",
+        "value": "Partido: {{4.homeTeam}} vs {{4.awayTeam}}\\n(Aqu\u00ed ir\u00eda la l\u00f3gica de c\u00e1lculo de probabilidad que en Make requiere m\u00faltiples m\u00f3dulos de variables o un m\u00f3dulo de c\u00f3digo personalizado como 'Run Node.js' si est\u00e1 disponible en el plan del usuario. Debido a la complejidad matem\u00e1tica del modelo Poisson, se recomienda usar un webhook a un script externo o el m\u00f3dulo de c\u00f3digo si se tiene acceso)."
+      },
+      "metadata": {
+        "designer": {
+          "x": 1800,
+          "y": -150
+        }
+      }
+    },
+    {
+      "id": 8,
+      "module": "telegram:ActionSendMessage",
+      "version": 1,
+      "parameters": {},
+      "mapper": {
+        "chatId": "5566290055",
+        "text": "\u26bd *PICKS DEL D\u00cdA*\\n\\n{{7.text}}",
+        "parseMode": "Markdown"
+      },
+      "metadata": {
+        "designer": {
+          "x": 2100,
+          "y": -150
+        }
+      }
+    }
+  ],
+  "metadata": {
+    "version": 1
+  }
+}

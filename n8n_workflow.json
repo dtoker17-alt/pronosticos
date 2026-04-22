@@ -1,0 +1,456 @@
+{
+  "nodes": [
+    {
+      "parameters": {
+        "mode": "everyMinute",
+        "hour": [
+          9
+        ],
+        "minute": [
+          0
+        ],
+        "timezone": "America/Mexico_City"
+      },
+      "name": "Schedule Trigger",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1,
+      "id": "node1",
+      "credentials": {},
+      "position": [
+        250,
+        100
+      ]
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "telegram-trigger",
+        "responseMode": "lastNode",
+        "options": {}
+      },
+      "name": "Webhook Trigger",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "id": "node2",
+      "credentials": {},
+      "position": [
+        250,
+        250
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "string": [
+            {
+              "value1": "{{ $json.message.text.toLowerCase() }}",
+              "operation": "contains",
+              "value2": "analisis"
+            },
+            {
+              "value1": "{{ $json.message.text.toLowerCase() }}",
+              "operation": "contains",
+              "value2": "pronosticos"
+            },
+            {
+              "value1": "{{ $json.message.text.toLowerCase() }}",
+              "operation": "contains",
+              "value2": "picks"
+            }
+          ]
+        }
+      },
+      "name": "IF (filtrar mensaje)",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "id": "node3",
+      "credentials": {},
+      "position": [
+        450,
+        250
+      ]
+    },
+    {
+      "parameters": {
+        "mode": "mergeByPosition"
+      },
+      "name": "Merge Triggers",
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 1,
+      "id": "node4",
+      "credentials": {},
+      "position": [
+        650,
+        175
+      ]
+    },
+    {
+      "parameters": {
+        "url": "https://sports.bzzoiro.com/football/matches/today",
+        "method": "GET",
+        "sendHeaders": true,
+        "headerParameters": [
+          {
+            "name": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "name": "Authorization",
+            "value": "Token {{ $env.BZZOIRO_API_KEY }}"
+          }
+        ],
+        "options": {
+          "timeout": 15000,
+          "retryOnFail": true,
+          "retryMaxTries": 2
+        },
+        "jsonParameters": false
+      },
+      "name": "HTTP: Obtener Partidos de Hoy",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 1,
+      "id": "node5",
+      "credentials": {},
+      "position": [
+        850,
+        175
+      ]
+    },
+    {
+      "parameters": {
+        "functionCode": "\nconst ligas_permitidas = [\n  'liga mx', 'champions league', 'premier league', 'la liga',\n  'serie a', 'bundesliga', 'ligue 1', 'mls', 'liga de expansi\u00f3n'\n];\n\nconst partidos = $input.first().json.data || [];\n\nconst filtrados = partidos.filter(p => {\n  const liga = (p.league || p.competition || '').toLowerCase();\n  return ligas_permitidas.some(l => liga.includes(l));\n});\n\nreturn filtrados.map(p => ({ json: p }));\n"
+      },
+      "name": "Code: Filtrar Ligas",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 1,
+      "id": "node6",
+      "credentials": {},
+      "position": [
+        1050,
+        175
+      ]
+    },
+    {
+      "parameters": {
+        "batchSize": 1
+      },
+      "name": "SplitInBatches",
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 1,
+      "id": "node7",
+      "credentials": {},
+      "position": [
+        1250,
+        175
+      ]
+    },
+    {
+      "parameters": {
+        "url": "https://sports.bzzoiro.com/football/teams/{{ $json.homeTeamId }}/stats",
+        "method": "GET",
+        "options": {
+          "timeout": 15000,
+          "retryOnFail": true,
+          "retryMaxTries": 2
+        },
+        "sendHeaders": true,
+        "headerParameters": [
+          {
+            "name": "Authorization",
+            "value": "Token {{ $env.BZZOIRO_API_KEY }}"
+          }
+        ]
+      },
+      "name": "HTTP: Stats Equipo Local",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 1,
+      "id": "node8",
+      "credentials": {},
+      "position": [
+        1450,
+        100
+      ]
+    },
+    {
+      "parameters": {
+        "url": "https://sports.bzzoiro.com/football/teams/{{ $json.awayTeamId }}/stats",
+        "method": "GET",
+        "options": {
+          "timeout": 15000,
+          "retryOnFail": true,
+          "retryMaxTries": 2
+        },
+        "sendHeaders": true,
+        "headerParameters": [
+          {
+            "name": "Authorization",
+            "value": "Token {{ $env.BZZOIRO_API_KEY }}"
+          }
+        ]
+      },
+      "name": "HTTP: Stats Equipo Visitante",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 1,
+      "id": "node9",
+      "credentials": {},
+      "position": [
+        1450,
+        250
+      ]
+    },
+    {
+      "parameters": {
+        "url": "https://sports.bzzoiro.com/football/matches/{{ $json.id }}/h2h",
+        "method": "GET",
+        "options": {
+          "timeout": 15000,
+          "retryOnFail": true,
+          "retryMaxTries": 2
+        },
+        "sendHeaders": true,
+        "headerParameters": [
+          {
+            "name": "Authorization",
+            "value": "Token {{ $env.BZZOIRO_API_KEY }}"
+          }
+        ]
+      },
+      "name": "HTTP: H2H",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 1,
+      "id": "node10",
+      "credentials": {},
+      "position": [
+        1650,
+        175
+      ]
+    },
+    {
+      "parameters": {
+        "functionCode": "\n// Node 11: Code: Calcular Probabilidades\n\n// Helper function for Poisson distribution\nfunction factorial(n) {\n    if (n === 0 || n === 1) return 1;\n    let result = 1;\n    for (let i = 2; i <= n; i++) {\n        result *= i;\n    }\n    return result;\n}\n\nfunction poisson(lambda, k) {\n    return (Math.pow(lambda, k) * Math.exp(-lambda)) / factorial(k);\n}\n\nconst match = $input.item[0].json;\nconst homeStats = $input.item[1].json; // From HTTP: Stats Equipo Local\nconst awayStats = $input.item[2].json; // From HTTP: Stats Equipo Visitante\nconst h2hData = $input.item[3].json; // From HTTP: H2H\n\nconst predictions = {};\n\n// Default values for stats if API returns 404 or timeout\nconst defaultAvgGoalsScored = 1.2;\nconst defaultAvgGoalsConceded = 1.2;\nconst defaultBttsPercentage = 0.50;\nconst defaultOver25Percentage = 0.52;\nconst defaultAvgCorners = 5.5; // Assuming a reasonable default\n\n// Extract stats with fallbacks\n// Assuming the /football/teams/{teamId}/stats endpoint returns these directly\nconst avg_goals_scored_home = homeStats?.avg_goals_scored || defaultAvgGoalsScored;\nconst avg_goals_conceded_home = homeStats?.avg_goals_conceded || defaultAvgGoalsConceded;\nconst avg_corners_home = homeStats?.avg_corners || defaultAvgCorners;\nconst btts_percentage_home = homeStats?.btts_percentage || defaultBttsPercentage;\nconst over25_percentage_home = homeStats?.over25_percentage || defaultOver25Percentage;\n\nconst avg_goals_scored_away = awayStats?.avg_goals_scored || defaultAvgGoalsScored;\nconst avg_goals_conceded_away = awayStats?.avg_goals_conceded || defaultAvgGoalsConceded;\nconst avg_corners_away = awayStats?.avg_corners || defaultAvgCorners;\nconst btts_percentage_away = awayStats?.btts_percentage || defaultBttsPercentage;\nconst over25_percentage_away = awayStats?.over25_percentage || defaultOver25Percentage;\n\n// MARKET 1 \u2014 1X2 (Local / Empate / Visitante)\nlet probLocal = 0;\nlet probEmpate = 0;\nlet probVisitante = 0;\n\ntry {\n    let home_strength = avg_goals_scored_home / avg_goals_conceded_away;\n    let away_strength = avg_goals_scored_away / avg_goals_conceded_home;\n    const home_advantage_factor = 1.1;\n\n    probLocal = (home_strength * home_advantage_factor) / (home_strength * home_advantage_factor + away_strength);\n    probVisitante = away_strength / (home_strength * home_advantage_factor + away_strength);\n    probEmpate = 1 - probLocal - probVisitante;\n\n    // Adjust draw probability if difference in strengths is small\n    if (Math.abs(home_strength - away_strength) < 0.2) { // Arbitrary small difference threshold\n        probEmpate = Math.max(probEmpate, 0.15);\n        const remainingProb = 1 - probEmpate;\n        probLocal = probLocal / (probLocal + probVisitante) * remainingProb;\n        probVisitante = probVisitante / (probLocal + probVisitante) * remainingProb;\n    }\n} catch (e) {\n    console.error(\"Error calculating 1X2 probabilities:\", e);\n    // Fallback to default or skip if critical\n}\n\npredictions['1X2_Local'] = probLocal;\npredictions['1X2_Empate'] = probEmpate;\npredictions['1X2_Visitante'] = probVisitante;\n\n// MARKET 2 \u2014 Over/Under 2.5 Goles\nlet prob_final_over25 = 0;\ntry {\n    const xG_total_esperado = avg_goals_scored_home + avg_goals_scored_away;\n\n    const p0 = poisson(xG_total_esperado, 0);\n    const p1 = poisson(xG_total_esperado, 1);\n    const p2 = poisson(xG_total_esperado, 2);\n\n    const pUnder2_5 = p0 + p1 + p2;\n    const pOver2_5 = 1 - pUnder2_5;\n\n    const historical_over25 = (over25_percentage_home + over25_percentage_away) / 2;\n    prob_final_over25 = (pOver2_5 * 0.60) + (historical_over25 * 0.40);\n} catch (e) {\n    console.error(\"Error calculating Over/Under 2.5 probabilities:\", e);\n}\npredictions['Over2.5_Goles'] = prob_final_over25;\n\n// MARKET 3 \u2014 BTTS (Ambos Anotan)\nlet pBTTS = 0;\ntry {\n    const btts_home = btts_percentage_home;\n    const btts_away = btts_percentage_away;\n\n    pBTTS = (btts_home + btts_away) / 2;\n\n    // Adjustment\n    if (avg_goals_scored_home < 0.8 || avg_goals_scored_away < 0.8) {\n        pBTTS = pBTTS - 0.10; // Subtract 10%\n    }\n} catch (e) {\n    console.error(\"Error calculating BTTS probabilities:\", e);\n}\npredictions['BTTS_Si'] = pBTTS;\n\n// MARKET 4 \u2014 Corners Over/Under\nlet pOver9_5Corners = 0;\ntry {\n    const avg_corners_total = avg_corners_home + avg_corners_away;\n\n    if (avg_corners_total > 12.5) {\n        pOver9_5Corners = 0.88;\n    } else if (avg_corners_total > 11.5) {\n        pOver9_5Corners = 0.80;\n    } else if (avg_corners_total > 10.5) {\n        pOver9_5Corners = 0.70;\n    }\n\n    // Adjustment H2H: Assuming h2hData.matches is an array of past matches with a 'totalCorners' field\n    if (h2hData && h2hData.matches && h2hData.matches.length > 0) {\n        let over9_5_count = 0;\n        for (const h2hMatch of h2hData.matches) {\n            if (h2hMatch.totalCorners && h2hMatch.totalCorners > 9.5) {\n                over9_5_count++;\n            }\n        }\n        if (over9_5_count / h2hData.matches.length >= 0.8) {\n            pOver9_5Corners += 0.05; // Add 5%\n        }\n    }\n} catch (e) {\n    console.error(\"Error calculating Corners Over/Under probabilities:\", e);\n}\npredictions['Corners_Over9.5'] = pOver9_5Corners;\n\n// MARKET 5 \u2014 Doble Oportunidad\npredictions['DobleOportunidad_1X'] = probLocal + probEmpate;\npredictions['DobleOportunidad_X2'] = probEmpate + probVisitante;\npredictions['DobleOportunidad_12'] = probLocal + probVisitante;\n\n// Ensure probabilities are between 0 and 1\nfor (const key in predictions) {\n    predictions[key] = Math.max(0, Math.min(1, predictions[key]));\n}\n\nreturn [{ json: { ...match, predictions } }];\n"
+      },
+      "name": "Code: Calcular Probabilidades",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 1,
+      "id": "node11",
+      "credentials": {},
+      "position": [
+        1850,
+        175
+      ]
+    },
+    {
+      "parameters": {
+        "functionCode": "\n// Node 12: Code: Filtrar >=75%\nconst item = $input.first().json;\nconst filteredPredictions = {};\nlet hasHighConfidencePick = false;\n\nfor (const market in item.predictions) {\n    if (item.predictions[market] >= 0.75) {\n        filteredPredictions[market] = item.predictions[market];\n        hasHighConfidencePick = true;\n    }\n}\n\nif (hasHighConfidencePick) {\n    return [{ json: { ...item, filteredPredictions } }];\n} else {\n    return [{ json: { skip: true } }];\n}\n"
+      },
+      "name": "Code: Filtrar >=75%",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 1,
+      "id": "node12",
+      "credentials": {},
+      "position": [
+        2050,
+        175
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "boolean": [
+            {
+              "value1": "{{ $json.skip }}",
+              "operation": "notEqual",
+              "value2": true
+            }
+          ]
+        }
+      },
+      "name": "IF: \u00bfTiene picks?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "id": "node13",
+      "credentials": {},
+      "position": [
+        2250,
+        175
+      ]
+    },
+    {
+      "parameters": {
+        "mode": "append",
+        "field": "picks",
+        "group": true
+      },
+      "name": "Aggregate",
+      "type": "n8n-nodes-base.aggregate",
+      "typeVersion": 1,
+      "id": "node14",
+      "credentials": {},
+      "position": [
+        2450,
+        175
+      ]
+    },
+    {
+      "parameters": {
+        "functionCode": "\n// Node 15: Code: Formatear Mensaje Telegram\nconst allPicks = $input.first().json.picks;\n\nlet message = '\u26bd *PICKS DEL D\u00cdA* \u2014 ' + new Date().toLocaleDateString('es-MX', { day: '2-digit', month: '2-digit', year: 'numeric' }) + '\n';\nmessage += '\ud83c\udfaf Solo pron\u00f3sticos \u226575% confianza\n';\nmessage += '\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\n\n';\n\nif (!allPicks || allPicks.length === 0) {\n    message = 'Sin picks de alta confianza hoy \ud83d\udd0d';\n} else {\n    for (const pick of allPicks) {\n        const match = pick.json;\n        message += `\ud83c\udfdf\ufe0f *${match.homeTeam} vs ${match.awayTeam}*\n`;\n        message += `\ud83c\udfc6 ${match.league} | \u23f0 ${match.time} CDMX\n`; // Using match.league and match.time as per original prompt\n\n        for (const market in match.filteredPredictions) {\n            const probability = (match.filteredPredictions[market] * 100).toFixed(0);\n            let emoji = '\u26aa'; // Default emoji\n            if (probability >= 85) {\n                emoji = '\ud83d\udfe2';\n            } else if (probability >= 75) {\n                emoji = '\ud83d\udfe1';\n            }\n\n            let predictionText = '';\n            let marketName = '';\n\n            // Map market keys to display names and prediction values\n            switch (market) {\n                case '1X2_Local': marketName = '1X2'; predictionText = 'Local'; break;\n                case '1X2_Empate': marketName = '1X2'; predictionText = 'Empate'; break;\n                case '1X2_Visitante': marketName = '1X2'; predictionText = 'Visitante'; break;\n                case 'Over2.5_Goles': marketName = 'Over/Under 2.5 Goles'; predictionText = 'Over 2.5'; break;\n                case 'BTTS_Si': marketName = 'BTTS'; predictionText = 'S\u00ed'; break;\n                case 'Corners_Over9.5': marketName = 'Corners Over/Under'; predictionText = 'Over 9.5'; break;\n                case 'DobleOportunidad_1X': marketName = 'Doble Oportunidad'; predictionText = '1X'; break;\n                case 'DobleOportunidad_X2': marketName = 'Doble Oportunidad'; predictionText = 'X2'; break;\n                case 'DobleOportunidad_12': marketName = 'Doble Oportunidad'; predictionText = '12'; break;\n                default: marketName = market; predictionText = 'N/A';\n            }\n\n            message += `${emoji} ${marketName}: *${predictionText}*\n`;\n            message += `\ud83d\udcca Confianza: ${probability}% ${emoji}\n`;\n        }\n        message += '\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\n';\n    }\n    message += '\ud83d\udccc Total picks: ' + allPicks.length + '\n';\n    message += '\u26a0\ufe0f _Solo con fines informativos. Apuesta responsablemente._';\n}\n\nreturn [{ json: { telegramMessage: message } }];\n"
+      },
+      "name": "Code: Formatear Mensaje Telegram",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 1,
+      "id": "node15",
+      "credentials": {},
+      "position": [
+        2650,
+        175
+      ]
+    },
+    {
+      "parameters": {
+        "chatId": "5566290055",
+        "text": "{{ $json.telegramMessage }}",
+        "parseMode": "Markdown"
+      },
+      "name": "Telegram Send Message",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1,
+      "id": "node16",
+      "credentials": {
+        "telegramApi": {
+          "id": "YOUR_TELEGRAM_CREDENTIAL_ID",
+          "name": "Telegram Bot Account"
+        }
+      },
+      "position": [
+        2850,
+        175
+      ]
+    }
+  ],
+  "connections": {
+    "Schedule Trigger": [
+      {
+        "node": "Merge Triggers",
+        "type": "main",
+        "index": 0
+      }
+    ],
+    "Webhook Trigger": [
+      {
+        "node": "IF (filtrar mensaje)",
+        "type": "main",
+        "index": 0
+      }
+    ],
+    "IF (filtrar mensaje)": [
+      {
+        "node": "Merge Triggers",
+        "type": "main",
+        "index": 0
+      }
+    ],
+    "Merge Triggers": [
+      {
+        "node": "HTTP: Obtener Partidos de Hoy",
+        "type": "main",
+        "index": 0
+      }
+    ],
+    "HTTP: Obtener Partidos de Hoy": [
+      {
+        "node": "Code: Filtrar Ligas",
+        "type": "main",
+        "index": 0
+      }
+    ],
+    "Code: Filtrar Ligas": [
+      {
+        "node": "SplitInBatches",
+        "type": "main",
+        "index": 0
+      }
+    ],
+    "SplitInBatches": [
+      {
+        "node": "HTTP: Stats Equipo Local",
+        "type": "main",
+        "index": 0
+      },
+      {
+        "node": "HTTP: Stats Equipo Visitante",
+        "type": "main",
+        "index": 0
+      },
+      {
+        "node": "HTTP: H2H",
+        "type": "main",
+        "index": 0
+      }
+    ],
+    "HTTP: Stats Equipo Local": [
+      {
+        "node": "Code: Calcular Probabilidades",
+        "type": "main",
+        "index": 0
+      }
+    ],
+    "HTTP: Stats Equipo Visitante": [
+      {
+        "node": "Code: Calcular Probabilidades",
+        "type": "main",
+        "index": 1
+      }
+    ],
+    "HTTP: H2H": [
+      {
+        "node": "Code: Calcular Probabilidades",
+        "type": "main",
+        "index": 2
+      }
+    ],
+    "Code: Calcular Probabilidades": [
+      {
+        "node": "Code: Filtrar >=75%",
+        "type": "main",
+        "index": 0
+      }
+    ],
+    "Code: Filtrar >=75%": [
+      {
+        "node": "IF: \u00bfTiene picks?",
+        "type": "main",
+        "index": 0
+      }
+    ],
+    "IF: \u00bfTiene picks?": [
+      {
+        "node": "Aggregate",
+        "type": "main",
+        "index": 0
+      }
+    ],
+    "Aggregate": [
+      {
+        "node": "Code: Formatear Mensaje Telegram",
+        "type": "main",
+        "index": 0
+      }
+    ],
+    "Code: Formatear Mensaje Telegram": [
+      {
+        "node": "Telegram Send Message",
+        "type": "main",
+        "index": 0
+      }
+    ]
+  },
+  "active": false,
+  "name": "Pron\u00f3sticos Deportivos",
+  "id": "pronosticos-deportivos-workflow",
+  "settings": {},
+  "staticData": null,
+  "meta": {
+    "instanceId": ""
+  },
+  "pinData": {}
+}
